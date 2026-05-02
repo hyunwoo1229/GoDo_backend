@@ -40,4 +40,13 @@ out/
 .env
 *.env
 !.env.example
+.env.prod
+.env.local
 
+
+# Oracle Wallet
+wallet/
+*.sso
+*.p12
+*.jks
+*.pem

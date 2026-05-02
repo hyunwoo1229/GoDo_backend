@@ -4,6 +4,7 @@ import com.example.godo.config.StorageProperties;
 import com.example.godo.dto.CompleteUploadRequest;
 import com.example.godo.dto.LocationDto;
 import com.example.godo.dto.MediaResponse;
+import com.example.godo.dto.ReorderItem;
 import com.example.godo.dto.UploadUrlRequest;
 import com.example.godo.dto.UploadUrlResponse;
 import com.example.godo.entity.Media;
@@ -14,9 +15,13 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -78,25 +83,61 @@ public class MediaService {
                     "Media is not in UPLOADING state: id=" + mediaId + ", status=" + media.getStatus());
         }
 
-        if (!storageService.doesObjectExist(media.getS3Key())) {
-            media.markAsFailed();
-            log.warn("Upload completion failed — object not found: mediaId={}, s3Key={}",
-                    mediaId, media.getS3Key());
-            throw new IllegalStateException("Uploaded object not found for mediaId=" + mediaId);
-        }
-
         media.updateLocation(request.latitude(), request.longitude(), request.locationName());
         if (request.capturedAt() != null) {
             media.updateCapturedAt(request.capturedAt());
         }
         media.markAsReady();
+        log.info("Media {} marked as READY", mediaId);
 
         if (media.getMediaType() == MediaType.VIDEO) {
-            thumbnailService.generateThumbnailAsync(media.getId());
+            scheduleThumbnailAfterCommit(media.getId());
         }
 
-        log.info("Completed upload for mediaId={}", mediaId);
         return MediaResponse.from(media, storageService);
+    }
+
+    // 썸네일 생성은 부모 트랜잭션이 커밋된 후에만 실행되어야 한다.
+    // 그렇지 않으면 비동기 트랜잭션이 status=UPLOADING 스냅샷을 본 채로
+    // 마지막에 커밋하며 부모의 status=READY 변경을 덮어쓸 수 있다.
+    private void scheduleThumbnailAfterCommit(Long mediaId) {
+        Runnable trigger = () -> {
+            try {
+                thumbnailService.generateThumbnailAsync(mediaId);
+                log.info("Thumbnail generation requested for mediaId={}", mediaId);
+            } catch (Exception e) {
+                log.warn("Thumbnail generation request failed for mediaId={}, Media is still READY",
+                        mediaId, e);
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    trigger.run();
+                }
+            });
+        } else {
+            trigger.run();
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<MediaResponse> getAllMedia(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size,
+                Sort.by(Sort.Direction.ASC, "displayOrder")
+                        .and(Sort.by(Sort.Direction.DESC, "uploadedAt")));
+        return mediaRepository.findAllByStatus(MediaStatus.READY, pageable).stream()
+                .map(media -> MediaResponse.from(media, storageService))
+                .toList();
+    }
+
+    @Transactional
+    public void reorderMedia(List<ReorderItem> items) {
+        for (ReorderItem item : items) {
+            mediaRepository.findById(item.id())
+                    .ifPresent(media -> media.updateDisplayOrder(item.displayOrder()));
+        }
     }
 
     @Transactional(readOnly = true)

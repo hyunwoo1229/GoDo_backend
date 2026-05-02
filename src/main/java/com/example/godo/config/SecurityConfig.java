@@ -41,6 +41,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/media/**").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/media/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/media/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/verify").authenticated()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults())

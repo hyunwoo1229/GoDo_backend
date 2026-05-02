@@ -3,6 +3,7 @@ package com.example.godo.controller;
 import com.example.godo.dto.CompleteUploadRequest;
 import com.example.godo.dto.LocationDto;
 import com.example.godo.dto.MediaResponse;
+import com.example.godo.dto.ReorderItem;
 import com.example.godo.dto.UploadUrlRequest;
 import com.example.godo.dto.UploadUrlResponse;
 import com.example.godo.service.MediaService;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -52,6 +54,21 @@ public class MediaController {
     @Operation(summary = "미디어 삭제 (관리자 전용)")
     public ResponseEntity<Void> deleteMedia(@PathVariable Long mediaId) {
         mediaService.deleteMedia(mediaId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping
+    @Operation(summary = "전체 미디어 목록 조회 (공개)")
+    public ResponseEntity<List<MediaResponse>> getAllMedia(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return ResponseEntity.ok(mediaService.getAllMedia(page, size));
+    }
+
+    @PutMapping("/reorder")
+    @Operation(summary = "미디어 순서 재정렬 (관리자 전용)")
+    public ResponseEntity<Void> reorderMedia(@RequestBody List<ReorderItem> items) {
+        mediaService.reorderMedia(items);
         return ResponseEntity.noContent().build();
     }
 

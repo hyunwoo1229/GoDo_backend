@@ -5,7 +5,8 @@
 ## 기술 스택
 - Spring Boot 3.5.13
 - Java 17
-- MySQL 8.0
+- MySQL 8.0 (로컬 개발)
+- Oracle Autonomous Database (운영)
 - Spring Security (Basic Auth)
 - Oracle Cloud Object Storage (S3 호환)
 - FFmpeg (썸네일 생성)
@@ -31,27 +32,41 @@ Spring Boot API (:8080)
 2. Docker 설치
 3. FFmpeg 설치 (`brew install ffmpeg`)
 
-### 환경변수 설정
-`.env.example`을 복사하여 `.env` 생성:
+### 로컬 개발 (Docker MySQL)
 
-```bash
-cp .env.example .env
-# .env 편집: ORACLE_ACCESS_KEY, ORACLE_SECRET_KEY, ADMIN_PASSWORD
-```
+1. `.env.example`을 복사하여 `.env` 생성
 
-### MySQL 실행
+   ```bash
+   cp .env.example .env
+   # .env 편집: ORACLE_ACCESS_KEY, ORACLE_SECRET_KEY, ADMIN_PASSWORD
+   ```
 
-```bash
-docker compose up -d mysql
-```
+2. MySQL 컨테이너 실행
 
-### 애플리케이션 실행
+   ```bash
+   docker compose up -d mysql
+   ```
 
-```bash
-./gradlew bootRun
-```
+3. IntelliJ에서 `GodoApplication` 실행 (기본 profile: `local`)
+   또는 CLI:
 
-기본 프로파일은 `local`, 서버는 `http://localhost:8080`에서 기동됩니다.
+   ```bash
+   ./gradlew bootRun
+   ```
+
+서버는 `http://localhost:8080`에서 기동됩니다.
+
+### 운영 환경 (Oracle Autonomous DB)
+
+1. `wallet/` 폴더에 Oracle Wallet 파일 배치 (`tnsnames.ora`, `sqlnet.ora`, `cwallet.sso` 등)
+2. `.env.prod` 파일에 환경변수 설정 (`SPRING_PROFILES_ACTIVE=prod`, `TNS_ADMIN`, `DB_PASSWORD`, `ORACLE_ACCESS_KEY`, `ORACLE_SECRET_KEY`, `ADMIN_PASSWORD`)
+3. IntelliJ에서 `GodoApplication-prod` 실행 (profile: `prod`, EnvFile 플러그인으로 `.env.prod` 로드)
+   또는 CLI:
+
+   ```bash
+   set -a; source .env.prod; set +a
+   ./gradlew bootRun --args='--spring.profiles.active=prod'
+   ```
 
 ### Swagger UI
 
@@ -59,12 +74,8 @@ docker compose up -d mysql
 
 ## 프로파일
 
-- `local` — 로컬 개발 (기본값)
-- `prod` — 배포 환경 (환경변수로 DB 접속 정보 주입)
-
-```bash
-SPRING_PROFILES_ACTIVE=prod java -jar build/libs/godo-0.0.1-SNAPSHOT.jar
-```
+- `local` — 로컬 개발 (기본값, MySQL)
+- `prod` — 운영 환경 (Oracle Autonomous DB, Wallet 필요)
 
 ## 빌드 & 도커
 

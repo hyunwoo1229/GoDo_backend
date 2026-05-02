@@ -5,7 +5,7 @@ spring:
   application:
     name: godo
   profiles:
-    active: local
+    active: ${SPRING_PROFILES_ACTIVE:local}
   servlet:
     multipart:
       max-file-size: 500MB

@@ -8,11 +8,13 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.time.LocalDateTime;
 
@@ -21,12 +23,14 @@ import java.time.LocalDateTime;
         @Index(name = "idx_media_location", columnList = "latitude, longitude"),
         @Index(name = "idx_media_status", columnList = "status")
 })
+@DynamicUpdate
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Media {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "media_seq_gen")
+    @SequenceGenerator(name = "media_seq_gen", sequenceName = "media_seq", allocationSize = 1)
     private Long id;
 
     @Column(name = "original_file_name", length = 200, nullable = false)
@@ -51,10 +55,10 @@ public class Media {
     @Column(name = "content_type", length = 100, nullable = false)
     private String contentType;
 
-    @Column(name = "latitude", nullable = false)
+    @Column(name = "latitude", nullable = true)
     private Double latitude;
 
-    @Column(name = "longitude", nullable = false)
+    @Column(name = "longitude", nullable = true)
     private Double longitude;
 
     @Column(name = "location_name", length = 100)
@@ -70,6 +74,9 @@ public class Media {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private MediaStatus status;
+
+    @Column(name = "display_order")
+    private Integer displayOrder;
 
     private Media(String originalFileName, String s3Key, String fileUrl,
                   MediaType mediaType, Long fileSize, String contentType) {
@@ -107,5 +114,9 @@ public class Media {
 
     public void updateCapturedAt(LocalDateTime capturedAt) {
         this.capturedAt = capturedAt;
+    }
+
+    public void updateDisplayOrder(Integer displayOrder) {
+        this.displayOrder = displayOrder;
     }
 }

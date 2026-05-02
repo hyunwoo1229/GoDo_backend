@@ -14,6 +14,8 @@ public interface MediaRepository extends JpaRepository<Media, Long> {
 
     List<Media> findAllByStatus(MediaStatus status);
 
+    List<Media> findAllByStatus(MediaStatus status, Pageable pageable);
+
     @Query("""
             SELECT m FROM Media m
             WHERE m.status = 'READY'

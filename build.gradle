@@ -31,7 +31,16 @@ dependencies {
 
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+	// MySQL (로컬 개발용)
 	runtimeOnly 'com.mysql:mysql-connector-j:8.4.0'
+
+	// Oracle JDBC (운영용 - Autonomous DB)
+	runtimeOnly 'com.oracle.database.jdbc:ojdbc11:23.5.0.24.07'
+	runtimeOnly 'com.oracle.database.security:oraclepki:23.5.0.24.07'
+	runtimeOnly 'com.oracle.database.security:osdt_core:21.7.0.0'
+	runtimeOnly 'com.oracle.database.security:osdt_cert:21.7.0.0'
+
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
