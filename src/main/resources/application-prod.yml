@@ -1,16 +1,34 @@
 spring:
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
+    url: jdbc:oracle:thin:@gododb_tp?TNS_ADMIN=${TNS_ADMIN}
+    username: ADMIN
     password: ${DB_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
   jpa:
+    database-platform: org.hibernate.dialect.OracleDialect
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+        dialect: org.hibernate.dialect.OracleDialect
+
+cloud:
+  storage:
+    endpoint: https://axkrsogyxb64.compat.objectstorage.ap-chuncheon-1.oraclecloud.com
+    region: ap-chuncheon-1
+    access-key: ${ORACLE_ACCESS_KEY}
+    secret-key: ${ORACLE_SECRET_KEY}
+    bucket: drone-gallery
+
+admin:
+  username: admin
+  password: ${ADMIN_PASSWORD}
 
 logging:
   level:
