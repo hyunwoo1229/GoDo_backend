@@ -1,12 +1,10 @@
 package com.example.godo.config;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -34,8 +32,7 @@ public class RedisConfig {
         template.setConnectionFactory(connectionFactory);
 
         StringRedisSerializer stringSerializer = new StringRedisSerializer();
-        GenericJackson2JsonRedisSerializer jsonSerializer =
-                new GenericJackson2JsonRedisSerializer(buildObjectMapper());
+        GenericJackson2JsonRedisSerializer jsonSerializer = buildJsonSerializer();
 
         template.setKeySerializer(stringSerializer);
         template.setHashKeySerializer(stringSerializer);
@@ -53,7 +50,7 @@ public class RedisConfig {
                 .serializeKeysWith(RedisSerializationContext.SerializationPair
                         .fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
-                        .fromSerializer(new GenericJackson2JsonRedisSerializer(buildObjectMapper())));
+                        .fromSerializer(buildJsonSerializer()));
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(config)
@@ -61,18 +58,21 @@ public class RedisConfig {
                 .build();
     }
 
-    private ObjectMapper buildObjectMapper() {
+    /**
+     * GenericJackson2JsonRedisSerializer는 내부적으로 자체 typing 설정을 추가하므로
+     * ObjectMapper에서는 activateDefaultTyping을 호출하지 않아야 한다.
+     * 그렇지 않으면 저장 형식(serializer 내부 typing)과 읽기 형식(우리가 설정한 typing)이
+     * 충돌하여 MismatchedInputException 발생.
+     */
+    private GenericJackson2JsonRedisSerializer buildJsonSerializer() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         mapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        mapper.activateDefaultTyping(
-                BasicPolymorphicTypeValidator.builder()
-                        .allowIfBaseType(Object.class)
-                        .build(),
-                ObjectMapper.DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY);
-        return mapper;
+        // ⚠️ activateDefaultTyping 호출하지 않음
+        // GenericJackson2JsonRedisSerializer가 자체적으로 NON_FINAL typing 처리
+
+        return new GenericJackson2JsonRedisSerializer(mapper);
     }
 }
