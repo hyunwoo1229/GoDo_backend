@@ -50,6 +50,14 @@ public class MediaController {
         return ResponseEntity.ok(mediaService.completeUpload(mediaId, request));
     }
 
+    @PostMapping("/{mediaId}/upload-complete")
+    @Operation(summary = "업로드 완료 알림 + 비디오 WebM 변환 트리거 (관리자 전용)")
+    public ResponseEntity<MediaResponse> uploadComplete(
+            @PathVariable Long mediaId,
+            @Valid @RequestBody CompleteUploadRequest request) {
+        return ResponseEntity.accepted().body(mediaService.uploadComplete(mediaId, request));
+    }
+
     @DeleteMapping("/{mediaId}")
     @Operation(summary = "미디어 삭제 (관리자 전용)")
     public ResponseEntity<Void> deleteMedia(@PathVariable Long mediaId) {

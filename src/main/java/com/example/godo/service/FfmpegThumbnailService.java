@@ -30,6 +30,7 @@ public class FfmpegThumbnailService implements ThumbnailService {
     private final MediaRepository mediaRepository;
     private final StorageService storageService;
     private final StorageProperties storageProperties;
+    private final MediaCacheEvictor mediaCacheEvictor;
 
     @Async("thumbnailExecutor")
     @Transactional
@@ -69,6 +70,7 @@ public class FfmpegThumbnailService implements ThumbnailService {
             }
 
             media.updateThumbnailUrl(thumbnailKey);
+            mediaCacheEvictor.evictAllForMedia(mediaId);
             log.info("Thumbnail generated successfully: mediaId={}, key={}", mediaId, thumbnailKey);
         } catch (Exception e) {
             log.error("Thumbnail generation failed for mediaId={}", mediaId, e);

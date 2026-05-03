@@ -102,6 +102,17 @@ public class Media {
         this.status = MediaStatus.FAILED;
     }
 
+    public void markAsConverting() {
+        this.status = MediaStatus.CONVERTING;
+    }
+
+    public void updateAfterConversion(String s3Key, String fileUrl, String contentType, Long fileSize) {
+        this.s3Key = s3Key;
+        this.fileUrl = fileUrl;
+        this.contentType = contentType;
+        this.fileSize = fileSize;
+    }
+
     public void updateLocation(Double latitude, Double longitude, String locationName) {
         this.latitude = latitude;
         this.longitude = longitude;

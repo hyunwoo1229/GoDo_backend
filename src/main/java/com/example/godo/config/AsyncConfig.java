@@ -23,4 +23,16 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    @Bean("videoTaskExecutor")
+    public TaskExecutor videoTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(50);
+        executor.setThreadNamePrefix("video-convert-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.initialize();
+        return executor;
+    }
 }

@@ -14,6 +14,9 @@ import com.example.godo.repository.MediaRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +43,7 @@ public class MediaService {
     private final MediaRepository mediaRepository;
     private final StorageService storageService;
     private final ThumbnailService thumbnailService;
+    private final VideoConversionService videoConversionService;
     private final StorageProperties storageProperties;
 
     @Transactional
@@ -74,6 +78,12 @@ public class MediaService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "media:gallery", allEntries = true),
+            @CacheEvict(value = "media:locations", allEntries = true),
+            @CacheEvict(value = "media:byId", key = "#mediaId"),
+            @CacheEvict(value = "media:byLocation", allEntries = true)
+    })
     public MediaResponse completeUpload(Long mediaId, CompleteUploadRequest request) {
         Media media = mediaRepository.findById(mediaId)
                 .orElseThrow(() -> new EntityNotFoundException("Media not found: id=" + mediaId));
@@ -122,7 +132,61 @@ public class MediaService {
         }
     }
 
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "media:gallery", allEntries = true),
+            @CacheEvict(value = "media:locations", allEntries = true),
+            @CacheEvict(value = "media:byId", key = "#mediaId"),
+            @CacheEvict(value = "media:byLocation", allEntries = true)
+    })
+    public MediaResponse uploadComplete(Long mediaId, CompleteUploadRequest request) {
+        Media media = mediaRepository.findById(mediaId)
+                .orElseThrow(() -> new EntityNotFoundException("Media not found: id=" + mediaId));
+
+        if (media.getStatus() != MediaStatus.UPLOADING) {
+            throw new IllegalStateException(
+                    "Media is not in UPLOADING state: id=" + mediaId + ", status=" + media.getStatus());
+        }
+
+        media.updateLocation(request.latitude(), request.longitude(), request.locationName());
+        if (request.capturedAt() != null) {
+            media.updateCapturedAt(request.capturedAt());
+        }
+
+        if (media.getMediaType() == MediaType.VIDEO) {
+            // 비디오는 변환 파이프라인이 status를 CONVERTING → READY/FAILED로 전이시킨다.
+            scheduleConversionAfterCommit(mediaId);
+            log.info("Media {} queued for WebM conversion", mediaId);
+        } else {
+            media.markAsReady();
+            log.info("Media {} marked as READY (image, no conversion)", mediaId);
+        }
+
+        return MediaResponse.from(media, storageService);
+    }
+
+    private void scheduleConversionAfterCommit(Long mediaId) {
+        Runnable trigger = () -> {
+            try {
+                videoConversionService.convertToWebM(mediaId);
+            } catch (Exception e) {
+                log.warn("Conversion submission failed for mediaId={}", mediaId, e);
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    trigger.run();
+                }
+            });
+        } else {
+            trigger.run();
+        }
+    }
+
     @Transactional(readOnly = true)
+    @Cacheable(value = "media:gallery", key = "#page + ':' + #size")
     public List<MediaResponse> getAllMedia(int page, int size) {
         Pageable pageable = PageRequest.of(page, size,
                 Sort.by(Sort.Direction.ASC, "displayOrder")
@@ -133,6 +197,7 @@ public class MediaService {
     }
 
     @Transactional
+    @CacheEvict(value = "media:gallery", allEntries = true)
     public void reorderMedia(List<ReorderItem> items) {
         for (ReorderItem item : items) {
             mediaRepository.findById(item.id())
@@ -141,6 +206,7 @@ public class MediaService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable("media:locations")
     public List<LocationDto> getAllLocations() {
         return mediaRepository.findAllReadyLocations().stream()
                 .map(projection -> LocationDto.from(projection, storageService))
@@ -160,6 +226,7 @@ public class MediaService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "media:byId", key = "#id")
     public MediaResponse getMedia(Long id) {
         Media media = mediaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Media not found: id=" + id));
@@ -167,6 +234,12 @@ public class MediaService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "media:gallery", allEntries = true),
+            @CacheEvict(value = "media:locations", allEntries = true),
+            @CacheEvict(value = "media:byId", key = "#mediaId"),
+            @CacheEvict(value = "media:byLocation", allEntries = true)
+    })
     public void deleteMedia(Long mediaId) {
         Media media = mediaRepository.findById(mediaId)
                 .orElseThrow(() -> new EntityNotFoundException("Media not found: id=" + mediaId));
