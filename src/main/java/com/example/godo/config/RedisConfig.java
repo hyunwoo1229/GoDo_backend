@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -58,20 +59,22 @@ public class RedisConfig {
                 .build();
     }
 
-    /**
-     * GenericJackson2JsonRedisSerializer는 내부적으로 자체 typing 설정을 추가하므로
-     * ObjectMapper에서는 activateDefaultTyping을 호출하지 않아야 한다.
-     * 그렇지 않으면 저장 형식(serializer 내부 typing)과 읽기 형식(우리가 설정한 typing)이
-     * 충돌하여 MismatchedInputException 발생.
-     */
     private GenericJackson2JsonRedisSerializer buildJsonSerializer() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         mapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        // ⚠️ activateDefaultTyping 호출하지 않음
-        // GenericJackson2JsonRedisSerializer가 자체적으로 NON_FINAL typing 처리
+
+        // 핵심: WRAPPER_ARRAY 형식 + NON_FINAL 사용
+        // GenericJackson2JsonRedisSerializer가 WRAPPER_ARRAY 형식을 기본으로 처리함
+        mapper.activateDefaultTyping(
+                BasicPolymorphicTypeValidator.builder()
+                        .allowIfBaseType(Object.class)
+                        .build(),
+                ObjectMapper.DefaultTyping.NON_FINAL
+                // ⚠️ JsonTypeInfo.As.PROPERTY 인자 제거 → 기본값 WRAPPER_ARRAY 사용
+        );
 
         return new GenericJackson2JsonRedisSerializer(mapper);
     }
