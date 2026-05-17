@@ -14,7 +14,6 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.io.InputStream;
@@ -51,29 +50,6 @@ public class OracleStorageService implements StorageService {
         } catch (S3Exception e) {
             log.error("Failed to generate presigned upload URL for key={}: {}", key, e.getMessage());
             throw new StorageException("Failed to generate presigned upload URL for key=" + key, e);
-        }
-    }
-
-    @Override
-    public String generatePresignedDownloadUrl(String key, Duration expiration) {
-        try {
-            GetObjectRequest getRequest = GetObjectRequest.builder()
-                    .bucket(properties.getBucket())
-                    .key(key)
-                    .build();
-
-            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                    .signatureDuration(expiration)
-                    .getObjectRequest(getRequest)
-                    .build();
-
-            String url = s3Presigner.presignGetObject(presignRequest).url().toString();
-            log.info("Generated presigned download URL for key={}, expiresIn={}s",
-                    key, expiration.getSeconds());
-            return url;
-        } catch (S3Exception e) {
-            log.error("Failed to generate presigned download URL for key={}: {}", key, e.getMessage());
-            throw new StorageException("Failed to generate presigned download URL for key=" + key, e);
         }
     }
 

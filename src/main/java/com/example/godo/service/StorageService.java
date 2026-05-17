@@ -8,8 +8,6 @@ public interface StorageService {
 
     String generatePresignedUploadUrl(String key, String contentType, Duration expiration);
 
-    String generatePresignedDownloadUrl(String key, Duration expiration);
-
     void uploadFile(String key, InputStream inputStream, long size, String contentType);
 
     void downloadToFile(String key, Path destinationPath);

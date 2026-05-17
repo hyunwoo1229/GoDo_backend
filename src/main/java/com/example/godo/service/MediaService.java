@@ -104,7 +104,7 @@ public class MediaService {
             scheduleThumbnailAfterCommit(media.getId());
         }
 
-        return MediaResponse.from(media, storageService);
+        return MediaResponse.from(media);
     }
 
     // 썸네일 생성은 부모 트랜잭션이 커밋된 후에만 실행되어야 한다.
@@ -162,7 +162,7 @@ public class MediaService {
             log.info("Media {} marked as READY (image, no conversion)", mediaId);
         }
 
-        return MediaResponse.from(media, storageService);
+        return MediaResponse.from(media);
     }
 
     private void scheduleConversionAfterCommit(Long mediaId) {
@@ -192,7 +192,7 @@ public class MediaService {
                 Sort.by(Sort.Direction.ASC, "displayOrder")
                         .and(Sort.by(Sort.Direction.DESC, "uploadedAt")));
         return mediaRepository.findAllByStatus(MediaStatus.READY, pageable).stream()
-                .map(media -> MediaResponse.from(media, storageService))
+                .map(MediaResponse::from)
                 .toList();
     }
 
@@ -209,7 +209,7 @@ public class MediaService {
     @Cacheable("media:locations")
     public List<LocationDto> getAllLocations() {
         return mediaRepository.findAllReadyLocations().stream()
-                .map(projection -> LocationDto.from(projection, storageService))
+                .map(LocationDto::from)
                 .toList();
     }
 
@@ -222,7 +222,7 @@ public class MediaService {
         double maxLng = lng + effectiveRadius;
 
         return mediaRepository.findNearby(minLat, maxLat, minLng, maxLng, pageable)
-                .map(media -> MediaResponse.from(media, storageService));
+                .map(MediaResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -230,7 +230,7 @@ public class MediaService {
     public MediaResponse getMedia(Long id) {
         Media media = mediaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Media not found: id=" + id));
-        return MediaResponse.from(media, storageService);
+        return MediaResponse.from(media);
     }
 
     @Transactional
