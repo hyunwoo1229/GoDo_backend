@@ -20,9 +20,9 @@ public record MediaResponse(
         MediaStatus status
 ) {
 
-    private static final String OCI_REGION = "YOUR_REGION";
-    private static final String OCI_NAMESPACE = "YOUR_NAMESPACE";
-    private static final String OCI_BUCKET = "YOUR_BUCKET";
+    private static final String OCI_REGION = "ap-chuncheon-1";
+    private static final String OCI_NAMESPACE = "axkrsogyxb64";
+    private static final String OCI_BUCKET = "drone-gallery";
 
     public static MediaResponse from(Media media) {
         return new MediaResponse(
