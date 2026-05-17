@@ -20,12 +20,16 @@ public record MediaResponse(
         MediaStatus status
 ) {
 
+    private static final String OCI_REGION = "YOUR_REGION";
+    private static final String OCI_NAMESPACE = "YOUR_NAMESPACE";
+    private static final String OCI_BUCKET = "YOUR_BUCKET";
+
     public static MediaResponse from(Media media) {
         return new MediaResponse(
                 media.getId(),
                 media.getOriginalFileName(),
-                media.getFileUrl(),
-                media.getThumbnailUrl(),
+                buildNativeUrl(media.getS3Key()),
+                media.getThumbnailUrl() != null ? buildNativeUrl(media.getThumbnailUrl()) : null,
                 media.getMediaType(),
                 media.getLatitude(),
                 media.getLongitude(),
@@ -34,5 +38,10 @@ public record MediaResponse(
                 media.getUploadedAt(),
                 media.getStatus()
         );
+    }
+
+    private static String buildNativeUrl(String objectKey) {
+        return "https://objectstorage.%s.oraclecloud.com/n/%s/b/%s/o/%s".formatted(
+                OCI_REGION, OCI_NAMESPACE, OCI_BUCKET, objectKey);
     }
 }
