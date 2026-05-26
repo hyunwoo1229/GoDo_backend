@@ -33,3 +33,24 @@ admin:
 logging:
   level:
     com.example.godo: INFO
+
+
+management:
+  server:
+    port: 9090
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: godo-backend
+  prometheus:
+    metrics:
+      export:
+        enabled: true
